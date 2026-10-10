@@ -74,7 +74,7 @@ stripe==15.3.0
 google-auth==2.30.0
 google-auth-oauthlib==1.2.0
 google-api-python-client==2.137.0
-msal==1.29.0
+msal==1.39.0
 
 # BigQuery warehouse (optional — enable FEATURE_WAREHOUSE)
 google-cloud-bigquery==3.25.0
