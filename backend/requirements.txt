@@ -50,7 +50,7 @@ prometheus-fastapi-instrumentator==7.0.0
 sentry-sdk[fastapi]==2.1.1
 
 # Proctoring (optional — enable FEATURE_PROCTORING)
-mediapipe==0.10.14
+mediapipe==1.1.0
 opencv-python-headless==4.9.0.80
 ultralytics==8.2.18
 
