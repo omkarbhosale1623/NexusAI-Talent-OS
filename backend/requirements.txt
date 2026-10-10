@@ -56,7 +56,7 @@ ultralytics==8.2.18
 
 # ML Pipeline (optional — enable FEATURE_ML_PIPELINE)
 sentence-transformers==3.0.1
-librosa==0.10.2
+librosa==1.0.0
 transformers>=4.41.1
 torch==2.3.0
 
