@@ -1,0 +1,44 @@
+# =====================================================================
+#  PodDisruptionBudgets — keep services up during voluntary disruptions.
+# =====================================================================
+# A PDB caps how many pods of a workload can be voluntarily evicted at
+# once (node drains, cluster upgrades, autoscaler scale-down). It does
+# NOT protect against involuntary disruptions (node crash).
+#
+# Both web tiers run >=2 replicas (see backend.yaml / frontend.yaml and
+# the HPAs in hpa.yaml with minReplicas: 2), so minAvailable: 1 always
+# leaves at least one pod serving while a node is drained.
+#
+# Selectors match the existing pod labels (app.kubernetes.io/name).
+#
+# NOTE: postgres (single-replica StatefulSet) and celery-worker
+# (single replica, jobs are retried) intentionally have no PDB — a PDB
+# with minAvailable: 1 on a 1-replica workload would block node drains
+# entirely. Scale those out first, then add a PDB if needed.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend

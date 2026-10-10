@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+venv/
+.venv/
+
+# Build output
+.next/
+dist/
+build/
+coverage/
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.db
+
+# TypeScript caches
+*.tsbuildinfo
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

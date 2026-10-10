@@ -1,0 +1,193 @@
+# =====================================================================
+#  NetworkPolicies — default-deny ingress + explicit allows.
+# =====================================================================
+# Zero-trust east-west networking for the nexusai namespace.
+#
+# IMPORTANT: NetworkPolicy is only ENFORCED if your CNI supports it
+# (Calico, Cilium, Antrea, Weave, AWS VPC CNI with policy enabled, ...).
+# On a CNI without policy support (e.g. plain Flannel) these objects are
+# accepted by the API server but silently NOT enforced.
+#
+# Selectors below match the existing pod labels:
+#   app.kubernetes.io/name: backend | frontend | postgres | redis | celery-worker
+#
+# Ingress-controller assumptions:
+#   - ingress-nginx runs in a namespace labelled `kubernetes.io/metadata.name:
+#     ingress-nginx` (the default for the standard install). Adjust the
+#     namespaceSelector below if your controller lives elsewhere.
+#
+# NOTE: a NetworkPolicy that selects a pod and specifies a policyType makes
+# that direction default-deny FOR THOSE PODS. The namespace-wide
+# default-deny below covers any pod not otherwise matched.
+
+# ── 1. Default-deny ALL ingress in the namespace ─────────────────────
+# Every pod starts with no allowed ingress; the policies that follow
+# re-open exactly the paths we need.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  podSelector: {}            # all pods in the namespace
+  policyTypes:
+    - Ingress
+---
+# ── 2. Backend ingress: from ingress-nginx and from frontend on 8000 ─
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-ingress
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # ingress-nginx controller (TLS termination / routing for /api)
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        # frontend pods doing server-side calls to the API
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: frontend
+      ports:
+        - protocol: TCP
+          port: 8000
+---
+# ── 3. Backend egress: postgres, redis, DNS, and 443 (LLM/external) ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-egress
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  policyTypes:
+    - Egress
+  egress:
+    # Postgres
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # DNS (kube-dns / CoreDNS) — both UDP and TCP on 53.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # External HTTPS: LLM providers, OAuth, object storage, SMTP-over-TLS APIs.
+    # 0.0.0.0/0 minus the cluster-internal ranges would be tighter, but we
+    # keep this broad and rely on 443-only to reach external APIs.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# ── 4. Frontend ingress: from ingress-nginx on 3000 ─────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-ingress
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+---
+# ── 5. Postgres ingress: from backend + celery-worker only on 5432 ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-ingress
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: backend
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: celery-worker
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+# ── 6. Redis ingress: from backend + celery-worker only on 6379 ─────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-ingress
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: backend
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: celery-worker
+      ports:
+        - protocol: TCP
+          port: 6379

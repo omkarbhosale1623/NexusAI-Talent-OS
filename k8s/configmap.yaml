@@ -1,0 +1,84 @@
+# Non-secret application configuration for NexusAI Talent OS.
+# Consumed by backend + celery-worker via `envFrom` and by the frontend
+# for the single NEXT_PUBLIC_API_URL value.
+#
+# Service hostnames below are in-cluster DNS names and MUST match the
+# Service metadata.name values:
+#   - postgres  -> k8s/postgres.yaml (headless svc "postgres")
+#   - redis     -> k8s/redis.yaml    (svc "redis")
+# DATABASE_URL itself lives in the Secret (it contains credentials).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexusai-config
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/part-of: nexusai-talent-os
+data:
+  # ── Core ────────────────────────────────────────────────────────────────
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  APP_NAME: "NexusAI Talent OS"
+  # Public-facing URLs. Update to your real domain (see ingress.yaml host).
+  APP_BASE_URL: "https://nexusai.example.com"
+  API_BASE_URL: "https://nexusai.example.com/api"
+  CORS_ORIGINS: "https://nexusai.example.com"
+
+  # ── Redis (in-cluster) ──────────────────────────────────────────────────
+  # "redis" resolves to the Redis Service in this namespace.
+  REDIS_URL: "redis://redis:6379/0"
+  CELERY_BROKER_URL: "redis://redis:6379/1"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/2"
+  MAX_REDIS_CONNECTIONS: "20"
+  REDIS_MAX_CONNECTIONS: "20"
+
+  # ── DB pool tuning (URL+creds come from Secret) ─────────────────────────
+  DB_POOL_SIZE: "10"
+  DB_MAX_OVERFLOW: "20"
+  DB_POOL_RECYCLE: "300"
+  DB_ECHO: "false"
+
+  # ── Feature flag defaults (mirror backend/app/core/config.py) ───────────
+  FEATURE_LIVEKIT: "false"
+  FEATURE_ML_PIPELINE: "false"
+  FEATURE_AI_QUESTION_GEN: "true"
+  FEATURE_FOLLOW_UP: "true"
+  FEATURE_PROCTORING: "true"
+  FEATURE_PROSODY: "true"
+  FEATURE_FRAUD_DETECTION: "true"
+  FEATURE_VIDEO_RECORDING: "true"
+  FEATURE_CODING: "true"
+  FEATURE_PANEL: "true"
+  FEATURE_BENCHMARKS: "true"
+  FEATURE_ATS: "true"
+  FEATURE_WHITE_LABEL: "true"
+  FEATURE_I18N: "true"
+  FEATURE_LANGGRAPH: "false"
+  FEATURE_WAREHOUSE: "false"
+  FEATURE_CONTINUOUS_LEARNING: "true"
+  FEATURE_BULK_UPLOAD: "true"
+  FEATURE_CALENDAR: "true"
+  FEATURE_SMS: "true"
+  FEATURE_KAFKA: "false"
+  FEATURE_BILLING: "true"
+
+  # ── Misc non-secret config ──────────────────────────────────────────────
+  RATE_LIMIT_ENABLED: "true"
+  AUDIT_LOG_ENABLED: "true"
+  EMAIL_ENABLED: "true"
+  DEFAULT_LOCALE: "en"
+  CODE_EXEC_PROVIDER: "piston"
+  PISTON_URL: "https://emkc.org/api/v2/piston"
+---
+# Separate ConfigMap for the frontend. NEXT_PUBLIC_* values are baked into
+# the client bundle, so this is intentionally non-secret and public.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexusai-frontend-config
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/part-of: nexusai-talent-os
+data:
+  # Browser talks to the API through the ingress at /api.
+  NEXT_PUBLIC_API_URL: "https://nexusai.example.com/api"

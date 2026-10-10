@@ -1,0 +1,46 @@
+# Pre-commit hooks for NexusAI Talent OS.
+#
+# Install once:   pip install pre-commit && pre-commit install --install-hooks
+# Enable push:    pre-commit install --hook-type pre-push
+# Run manually:   pre-commit run --all-files
+#
+# The ruff hooks read backend/ruff.toml automatically when run against files
+# under backend/.
+
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  # ── Ruff: lint + format check ────────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        name: ruff (lint)
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        name: ruff (format check)
+        args: [--check]
+        files: ^backend/
+
+  # ── Generic hygiene hooks ────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+
+  # ── Local pre-push: backend test suite ───────────────────────────────────
+  - repo: local
+    hooks:
+      - id: backend-pytest
+        name: backend pytest (pre-push)
+        entry: bash -c 'cd backend && pytest -q'
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]

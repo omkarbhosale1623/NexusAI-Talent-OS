@@ -1,0 +1,79 @@
+# In-cluster Redis 7 used as cache, Celery broker and result backend.
+#
+# NOTE: For real production prefer a MANAGED Redis (ElastiCache /
+# Memorystore / Upstash) or a Redis HA/Sentinel setup. This single
+# Deployment with an emptyDir-less PVC-less setup persists via AOF to an
+# ephemeral path; data is lost if the pod is rescheduled. Add a PVC if you
+# need durability.
+#
+# Service name "redis" is referenced by REDIS_URL / CELERY_* in configmap.yaml.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  selector:
+    app.kubernetes.io/name: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/part-of: nexusai-talent-os
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999          # redis user in the official image
+        fsGroup: 999
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["redis-server", "--appendonly", "yes"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        # Ephemeral; replace with a PVC for durable AOF persistence.
+        - name: data
+          emptyDir: {}

@@ -1,0 +1,81 @@
+# =====================================================================
+#  OPTIONAL — Kafka for analytics/streaming. NOT applied by default.
+# =====================================================================
+# This mirrors the Kafka service that lives behind a profile in
+# docker-compose.yml. It is intentionally NOT listed (uncommented) in
+# kustomization.yaml. To enable:
+#   1. Uncomment the kafka.optional.yaml line in kustomization.yaml
+#   2. Set FEATURE_KAFKA="true" in configmap.yaml
+#   3. (optional) add KAFKA_BOOTSTRAP_SERVERS="kafka:9092" to the ConfigMap
+#
+# This uses a single-node KRaft Kafka for a self-contained demo. For real
+# production use a managed Kafka (MSK / Confluent Cloud / Redpanda Cloud)
+# or the Strimzi operator with a proper multi-broker cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  selector:
+    app.kubernetes.io/name: kafka
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kafka
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kafka
+        app.kubernetes.io/part-of: nexusai-talent-os
+    spec:
+      containers:
+        - name: kafka
+          image: bitnami/kafka:3.7
+          ports:
+            - containerPort: 9092
+          env:
+            - name: KAFKA_CFG_NODE_ID
+              value: "0"
+            - name: KAFKA_CFG_PROCESS_ROLES
+              value: "controller,broker"
+            - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+              value: "0@kafka:9093"
+            - name: KAFKA_CFG_LISTENERS
+              value: "PLAINTEXT://:9092,CONTROLLER://:9093"
+            - name: KAFKA_CFG_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka:9092"
+            - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/kafka
+      volumes:
+        - name: data
+          emptyDir: {}   # ephemeral; add a PVC for durable demo data

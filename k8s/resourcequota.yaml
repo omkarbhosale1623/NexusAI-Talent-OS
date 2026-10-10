@@ -1,0 +1,67 @@
+# =====================================================================
+#  ResourceQuota + LimitRange for the nexusai namespace.
+# =====================================================================
+# - ResourceQuota caps the TOTAL requests/limits the namespace may consume
+#   and the count of a few key objects, so a runaway HPA or a bad deploy
+#   can't exhaust the cluster.
+# - LimitRange supplies DEFAULT requests/limits to any container that
+#   omits them, and enforces sane min/max bounds per container.
+#
+# The quota headroom is sized for the default replica counts plus HPA
+# burst (backend/frontend max 10 each) with comfortable slack. Tune to
+# your node capacity. If you add workloads, raise these numbers.
+#
+# IMPORTANT: with a ResourceQuota on requests/limits in place, EVERY
+# container in the namespace must declare requests AND limits (the
+# LimitRange defaults below satisfy this for any container that forgets).
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: nexusai-quota
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  hard:
+    # Aggregate compute budget for the whole namespace.
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "24"
+    limits.memory: 48Gi
+    # Guard rails on object counts.
+    pods: "60"
+    persistentvolumeclaims: "8"
+    services: "15"
+    secrets: "30"
+    configmaps: "30"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: nexusai-limits
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  limits:
+    # Per-container defaults + bounds. `default` = limit applied when a
+    # container omits one; `defaultRequest` = request applied when omitted.
+    - type: Container
+      default:
+        cpu: "500m"
+        memory: 512Mi
+      defaultRequest:
+        cpu: "100m"
+        memory: 128Mi
+      min:
+        cpu: "50m"
+        memory: 64Mi
+      max:
+        cpu: "2"
+        memory: 2Gi
+    # Bound the size of any single PVC (matches postgres 10Gi default).
+    - type: PersistentVolumeClaim
+      min:
+        storage: 1Gi
+      max:
+        storage: 100Gi

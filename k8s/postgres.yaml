@@ -1,0 +1,104 @@
+# In-cluster PostgreSQL 16 for a self-contained deploy.
+#
+# NOTE: For real production prefer a MANAGED database (RDS / Cloud SQL /
+# Neon / Supabase) with backups, HA, and point-in-time recovery. A single
+# StatefulSet replica like this has no replication and no automated backups.
+#
+# Credentials are pulled from the nexusai-secrets Secret (POSTGRES_*).
+# The Service name "postgres" is referenced by DATABASE_URL in secret.yaml.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  clusterIP: None          # headless service for the StatefulSet
+  selector:
+    app.kubernetes.io/name: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/part-of: nexusai-talent-os
+    spec:
+      securityContext:
+        # Official postgres image runs as uid 999; let the volume be group-writable.
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: nexusai-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nexusai-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: nexusai-secrets
+                  key: POSTGRES_DB
+            # Data lives in a subdir so the mount's lost+found doesn't break init.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+        # storageClassName: standard   # uncomment/set to your cluster's class

@@ -1,0 +1,9 @@
+# Namespace for all NexusAI Talent OS resources.
+# Every other manifest in this directory targets metadata.namespace: nexusai.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexusai
+  labels:
+    app.kubernetes.io/part-of: nexusai-talent-os
+    name: nexusai

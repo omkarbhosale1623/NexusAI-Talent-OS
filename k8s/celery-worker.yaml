@@ -1,0 +1,70 @@
+# Celery worker for NexusAI Talent OS background tasks.
+# Same image as the backend; no Service (workers pull jobs from Redis).
+# Broker / result backend come from the ConfigMap (CELERY_* -> in-cluster redis).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: celery-worker
+    app.kubernetes.io/part-of: nexusai-talent-os
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: celery-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: celery-worker
+        app.kubernetes.io/part-of: nexusai-talent-os
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: celery-worker
+          image: nexusai/backend:latest
+          command:
+            - "celery"
+            - "-A"
+            - "app.core.celery_app"
+            - "worker"
+            - "--loglevel=info"
+            - "--concurrency=2"
+          envFrom:
+            - configMapRef:
+                name: nexusai-config
+            - secretRef:
+                name: nexusai-secrets
+          # Liveness via celery's own ping against the broker.
+          livenessProbe:
+            exec:
+              command:
+                ["sh", "-c", "celery -A app.core.celery_app inspect ping -d celery@$HOSTNAME"]
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1.5Gi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

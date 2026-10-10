@@ -1,0 +1,41 @@
+model_list:
+  - model_name: google/gemini-2.5-flash
+    litellm_params:
+      model: openrouter/google/gemini-2.5-flash
+      api_key: "os.environ/LLM_API_KEY"
+      api_base: "https://openrouter.ai/api/v1"
+      tpm: 100000
+      rpm: 1000
+
+  - model_name: meta-llama/llama-3.3-70b-instruct
+    litellm_params:
+      model: openrouter/meta-llama/llama-3.3-70b-instruct
+      api_key: "os.environ/LLM_API_KEY"
+      api_base: "https://openrouter.ai/api/v1"
+      tpm: 100000
+      rpm: 1000
+
+  - model_name: meta-llama/llama-3.1-8b-instruct:free
+    litellm_params:
+      model: openrouter/meta-llama/llama-3.1-8b-instruct:free
+      api_key: "os.environ/LLM_API_KEY"
+      api_base: "https://openrouter.ai/api/v1"
+      tpm: 100000
+      rpm: 1000
+
+  - model_name: tts-1
+    litellm_params:
+      model: openai/tts-1
+      api_key: "os.environ/OPENAI_API_KEY"
+
+router_settings:
+  routing_strategy: least-busy
+  redis_host: redis
+  redis_port: 6379
+  redis_password: ""
+  enable_cache: true
+  cache_type: redis
+
+general_settings:
+  master_key: "sk_litellm_master_key"
+  database_url: "postgresql://nexusai:nexusai@postgres:5432/nexusai_talent"

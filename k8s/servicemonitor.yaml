@@ -1,0 +1,48 @@
+# =====================================================================
+#  Prometheus Operator ServiceMonitor — EXAMPLE. NOT applied by default.
+# =====================================================================
+# Scrapes the backend's /metrics endpoint via the Prometheus Operator.
+#
+# REQUIRES: the Prometheus Operator and its CRDs
+# (monitoring.coreos.com/v1) installed in the cluster (e.g. the
+# kube-prometheus-stack Helm chart). The ServiceMonitor CRD is not present
+# on a vanilla cluster, so this file is intentionally EXCLUDED from
+# kustomization.yaml — applying it without the CRD would error.
+#
+# This is an alternative to the prometheus.io/scrape pod annotations
+# already set in backend.yaml (which work with a plain Prometheus using
+# kubernetes_sd pod scraping). Use ONE approach; with the Operator the
+# ServiceMonitor is the idiomatic choice.
+#
+# Selector matching:
+#   - `selector.matchLabels` targets the backend Service (backend.yaml),
+#     which carries app.kubernetes.io/name: backend.
+#   - `endpoints.port` is the *Service port NAME* ("http", port 8000),
+#     not the number.
+#   - For the Operator to discover this, the ServiceMonitor's own labels
+#     must satisfy the Prometheus CR's `serviceMonitorSelector`. The
+#     `release: kube-prometheus-stack` label below is the common default;
+#     change it to match your Prometheus install.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nexusai-backend
+  namespace: nexusai
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: nexusai-talent-os
+    # Must match your Prometheus CR's serviceMonitorSelector.
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - nexusai
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  endpoints:
+    - port: http              # named port on the backend Service (8000)
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      scheme: http

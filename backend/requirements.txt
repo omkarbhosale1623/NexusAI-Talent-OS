@@ -1,0 +1,92 @@
+# Core
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.1
+pydantic-settings==2.2.1
+python-multipart==0.0.9
+
+# Database
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Redis + Celery
+redis==5.0.4
+celery==5.4.0
+
+# Auth
+bcrypt==4.1.3
+python-jose[cryptography]==3.3.0
+cryptography==42.0.8   # field-level encryption at rest (app.core.crypto)
+
+# LLM / AI
+openai==1.30.1
+litellm==1.38.0
+httpx==0.27.0
+
+# Speech
+faster-whisper>=1.0.1
+pydub==0.25.1
+
+# Document parsing
+pdfminer.six==20221105
+pypdf==4.2.0
+python-docx==1.1.2
+pandas==2.2.2
+openpyxl==3.1.2
+xlrd==2.0.1
+
+# Storage
+boto3==1.34.110
+
+# Email / Utils
+aiofiles==23.2.1
+python-slugify==8.0.4
+email-validator==2.2.0   # required by pydantic EmailStr (schemas use it)
+
+# Monitoring
+prometheus-fastapi-instrumentator==7.0.0
+sentry-sdk[fastapi]==2.1.1
+
+# Proctoring (optional — enable FEATURE_PROCTORING)
+mediapipe==0.10.14
+opencv-python-headless==4.9.0.80
+ultralytics==8.2.18
+
+# ML Pipeline (optional — enable FEATURE_ML_PIPELINE)
+sentence-transformers==3.0.1
+librosa==0.10.2
+transformers>=4.41.1
+torch==2.3.0
+
+# LiveKit (optional — enable FEATURE_LIVEKIT)
+livekit==0.11.1
+livekit-api==0.5.0
+
+# SMS (optional — enable FEATURE_SMS)
+twilio==9.2.3
+
+# Billing / Stripe (optional — enable FEATURE_BILLING)
+stripe==15.3.0
+
+# Calendar / Google APIs (optional — enable FEATURE_CALENDAR / FEATURE_WAREHOUSE)
+google-auth==2.30.0
+google-auth-oauthlib==1.2.0
+google-api-python-client==2.137.0
+msal==1.29.0
+
+# BigQuery warehouse (optional — enable FEATURE_WAREHOUSE)
+google-cloud-bigquery==3.25.0
+
+# LangGraph multi-agent orchestration (optional — enable FEATURE_LANGGRAPH)
+langgraph==0.2.14
+langchain-core==0.2.34
+
+# Kafka streaming (optional — enable FEATURE_KAFKA; Spark consumer is separate)
+aiokafka==0.11.0
+# pyspark==3.5.1  # run in the Spark cluster image, not the API container
+
+# Testing / dev
+pytest==8.3.2
+pytest-asyncio==0.23.8

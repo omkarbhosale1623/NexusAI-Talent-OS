@@ -1,0 +1,53 @@
+# Kustomization for NexusAI Talent OS.
+# Deploy everything with:  kubectl apply -k k8s/
+#
+# Resources are ordered roughly by dependency (namespace first), though
+# kubectl/kustomize applies them in a server-side-friendly order anyway.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: nexusai
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - postgres.yaml
+  - redis.yaml
+  - backend.yaml
+  - celery-worker.yaml
+  - frontend.yaml
+  - ingress.yaml
+  - hpa.yaml
+  # ── Enterprise hardening (applied by default) ──────────────────────────
+  - networkpolicy.yaml      # default-deny ingress + explicit allows
+  - pdb.yaml                # PodDisruptionBudgets for backend + frontend
+  - resourcequota.yaml      # namespace ResourceQuota + LimitRange
+  - serviceaccount.yaml     # dedicated nexusai-backend SA (no token automount)
+  # Optional analytics streaming — disabled by default. Uncomment to enable
+  # AND set FEATURE_KAFKA=true in configmap.yaml. See kafka.optional.yaml.
+  # - kafka.optional.yaml
+  #
+  # ── Requires extra CRDs — NOT applied by default ───────────────────────
+  # These reference custom resources that are absent on a vanilla cluster,
+  # so `kubectl kustomize` / `apply -k` would fail if listed here. Install
+  # the operators first, then uncomment.
+  #   external-secrets.yaml  needs the External Secrets Operator CRDs
+  #                          (external-secrets.io). Also remove secret.yaml
+  #                          above once ESO owns nexusai-secrets.
+  #   servicemonitor.yaml    needs the Prometheus Operator CRDs
+  #                          (monitoring.coreos.com).
+  # - external-secrets.yaml
+  # - servicemonitor.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: nexusai-talent-os
+    includeSelectors: false
+
+# To pin image tags per environment, override here instead of editing manifests:
+# images:
+#   - name: nexusai/backend
+#     newTag: v1.0.0
+#   - name: nexusai/frontend
+#     newTag: v1.0.0

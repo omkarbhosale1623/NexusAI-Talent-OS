@@ -1,0 +1,54 @@
+# Ruff configuration for the NexusAI Talent OS backend.
+# Tuned for this codebase's dense, pragmatic style: keep real errors (E/F),
+# add useful import-sorting / pyupgrade / bugbear checks, but don't flood
+# the build with stylistic noise.
+
+line-length = 100
+target-version = "py311"
+
+# Generated / vendored / non-source trees.
+extend-exclude = [
+    "venv",
+    ".venv",
+    "alembic/versions",
+    "build",
+    "dist",
+    "__pycache__",
+]
+
+[lint]
+# E  pycodestyle errors      (real syntax/whitespace problems)
+# F  pyflakes                (undefined names, unused imports, etc.)
+# I  isort                   (import ordering)
+# UP pyupgrade               (modern py311 idioms)
+# B  flake8-bugbear          (likely bugs)
+select = ["E", "F", "I", "UP", "B"]
+
+ignore = [
+    "E701",  # multiple statements on one line (colon) — matches dense style
+    "E702",  # multiple statements on one line (semicolon)
+    "E402",  # module-level import not at top of file (conditional/feature imports)
+    "E501",  # line too long — formatter handles wrapping; don't hard-fail
+    "E741",  # ambiguous variable name (l, I, O) used in tight numeric code
+    "B008",  # function call in argument defaults — FastAPI Depends() pattern
+    "B904",  # raise ... from err inside except — not enforced here
+    "UP007", # Optional[X] / Union syntax — kept for readability
+]
+
+# Keep E9/F63/F7/F82 (real errors) un-ignorable; they're in the E/F families
+# above and are never listed in `ignore`.
+
+[lint.isort]
+known-first-party = ["app"]
+combine-as-imports = true
+
+[lint.per-file-ignores]
+# Tests and __init__ files get extra slack.
+"__init__.py" = ["F401"]          # re-exported names
+"tests/**/*.py" = ["F401", "F811", "B011"]
+"alembic/**/*.py" = ["F401", "E402"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
