@@ -88,5 +88,5 @@ aiokafka==0.11.0
 # pyspark==3.5.1  # run in the Spark cluster image, not the API container
 
 # Testing / dev
-pytest==8.3.2
+pytest==9.1.1
 pytest-asyncio==0.23.8
