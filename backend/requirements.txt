@@ -71,7 +71,7 @@ twilio==9.2.3
 stripe==15.3.0
 
 # Calendar / Google APIs (optional — enable FEATURE_CALENDAR / FEATURE_WAREHOUSE)
-google-auth==2.30.0
+google-auth==2.60.0
 google-auth-oauthlib==1.2.0
 google-api-python-client==2.137.0
 msal==1.29.0
