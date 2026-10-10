@@ -47,7 +47,7 @@ email-validator==2.2.0   # required by pydantic EmailStr (schemas use it)
 
 # Monitoring
 prometheus-fastapi-instrumentator==7.0.0
-sentry-sdk[fastapi]==2.1.1
+sentry-sdk[fastapi]==2.71.0
 
 # Proctoring (optional — enable FEATURE_PROCTORING)
 mediapipe==0.10.14
